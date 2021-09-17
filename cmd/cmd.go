@@ -27,10 +27,10 @@ const (
 
 //Config unites all following configs into a single type
 type MailConfig struct {
-	Sender       SenderConfig `yaml:"Sender"`
-	Recipients   []Recipient  `yaml:"Recipients"`
-	Header       Header       `yaml:"Header"`
-	TemplateText string       `yaml:"TemplateText`
+	Sender       SenderConfig         `yaml:"Sender"`
+	Recipients   map[string]Recipient `yaml:"Recipients"`
+	Header       Header               `yaml:"Header"`
+	TemplateText string               `yaml:"TemplateText"`
 
 	//template can contain whatever is in struct EmailSendRequest
 	template *template.Template
@@ -65,12 +65,13 @@ type Recipient struct {
 }
 
 type EmailSendRequest struct {
-	IPAddress   string
-	Name        string
-	Description string
-	Product     string
-	Contact     string
-	Result      chan<- EmailSendOutcome
+	IPAddress    string
+	FirstName    string
+	LastName     string
+	CompanyName  string
+	EmailAddress string
+	Description  string
+	Result       chan<- EmailSendOutcome
 }
 
 type EmailSendOutcome struct {
@@ -107,6 +108,8 @@ func checkFatalError(err error, stage string) {
 }
 
 func (c *ServerConfig) getConfig(filename string) error {
+	c.EmailConfig.Recipients = make(map[string]Recipient)
+
 	yamlFile, err := ioutil.ReadFile(filename)
 	checkFatalError(err, "READING CONFIG FILE")
 
@@ -143,10 +146,11 @@ func (m *MailConfig) EmailerInstance(ch <-chan EmailSendRequest) {
 				[]string{r.Address},
 				[]byte(m.Header.ToString(r.Address)+buf.String()),
 			)
-			if err != nil {
-				cmd.Result <- EmailSendOutcome{err}
-				continue
-			}
+			/*
+				infoLogger.Printf("Wanted to send message %s with header %s to address %s, recipient %s",
+					buf.String(), m.Header.ToString(r.Address), address, r.Name)
+			*/
+			cmd.Result <- EmailSendOutcome{err}
 		}
 	}
 }
@@ -159,10 +163,11 @@ func (s *server) clientHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		var data EmailSendRequest
-		data.IPAddress = r.Host
-		data.Name = r.FormValue("name")
-		data.Product = r.FormValue("product")
-		data.Contact = r.FormValue("contact")
+		data.IPAddress = r.RemoteAddr
+		data.FirstName = r.FormValue("firstName")
+		data.LastName = r.FormValue("lastName")
+		data.CompanyName = r.FormValue("company")
+		data.EmailAddress = r.FormValue("email")
 		data.Description = r.FormValue("description")
 		result := make(chan EmailSendOutcome)
 		data.Result = result
@@ -170,11 +175,11 @@ func (s *server) clientHandler(w http.ResponseWriter, r *http.Request) {
 		outcome := <-result
 		if outcome.Error != nil {
 			errorLogger.Printf(
-				"Error handling client (IP: %s, Name: %s, Product: %s, Contact: %s): %v",
+				"Error handling client (IP: %s, Name: %s, Company: %s, Email: %s): %v",
 				data.IPAddress,
-				data.Name,
-				data.Product,
-				data.Contact,
+				data.FirstName+" "+data.LastName,
+				data.CompanyName,
+				data.EmailAddress,
 				outcome.Error,
 			)
 			http.Error(w, "Internal Error", http.StatusInternalServerError)
