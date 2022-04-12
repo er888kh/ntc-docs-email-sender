@@ -1,0 +1,27 @@
+Address: "localhost:8090"
+BaseURL: "/"
+EmailConfig:
+  Sender:
+    ServerHost: "SERVER_HOST"
+    ServerPort: 587
+    SenderAddress: "ADDRESS@HOST"
+    SenderName: "SENDER NAME"
+    SenderPassword: "EMAIL_PASSWORD"
+  Recipients:
+    sales:
+      Name: "Sales unit"
+      Title: ""
+      Address: "THEIR_EMAIL"
+  Header:
+    From: "ADDRESS@HOST"
+    Subject: "SUBJECT?"
+    MIME: "text/plain"
+    Miscellaneous: ""
+  TemplateText: |
+    The NTC docs portal recieved a new issue from this sender:
+    IP: {{ .IPAddress }}
+    Name: {{ .FirstName }} {{ .LastName }}
+    Product: {{ .ProductSerial }}-{{ .ProductModel }}
+    Company: {{ .CompanyName }}
+    Reply Email Address: {{ .EmailAddress }}
+    Issue Description: {{ .Description }}

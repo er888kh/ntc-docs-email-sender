@@ -65,13 +65,15 @@ type Recipient struct {
 }
 
 type EmailSendRequest struct {
-	IPAddress    string
-	FirstName    string
-	LastName     string
-	CompanyName  string
-	EmailAddress string
-	Description  string
-	Result       chan<- EmailSendOutcome
+	IPAddress     string
+	FirstName     string
+	LastName      string
+	ProductSerial string
+	ProductModel  string
+	CompanyName   string
+	EmailAddress  string
+	Description   string
+	Result        chan<- EmailSendOutcome
 }
 
 type EmailSendOutcome struct {
@@ -131,11 +133,11 @@ func (m *MailConfig) EmailerInstance(ch <-chan EmailSendRequest) {
 	)
 	address := fmt.Sprintf("%s:%d", m.Sender.Host, m.Sender.Port)
 	var err error
-	for cmd := range ch {
+	for emailReq := range ch {
 		buf := new(bytes.Buffer)
-		err = m.template.Execute(buf, cmd)
+		err = m.template.Execute(buf, emailReq)
 		if err != nil {
-			cmd.Result <- EmailSendOutcome{err}
+			emailReq.Result <- EmailSendOutcome{err}
 			continue
 		}
 		for _, r := range m.Recipients {
@@ -150,7 +152,7 @@ func (m *MailConfig) EmailerInstance(ch <-chan EmailSendRequest) {
 				infoLogger.Printf("Wanted to send message %s with header %s to address %s, recipient %s",
 					buf.String(), m.Header.ToString(r.Address), address, r.Name)
 			*/
-			cmd.Result <- EmailSendOutcome{err}
+			emailReq.Result <- EmailSendOutcome{err}
 		}
 	}
 }
@@ -166,6 +168,8 @@ func (s *server) clientHandler(w http.ResponseWriter, r *http.Request) {
 		data.IPAddress = r.RemoteAddr
 		data.FirstName = r.FormValue("firstName")
 		data.LastName = r.FormValue("lastName")
+		data.ProductSerial = r.FormValue("productSerial")
+		data.ProductModel = r.FormValue("productModel")
 		data.CompanyName = r.FormValue("company")
 		data.EmailAddress = r.FormValue("email")
 		data.Description = r.FormValue("description")
@@ -175,9 +179,10 @@ func (s *server) clientHandler(w http.ResponseWriter, r *http.Request) {
 		outcome := <-result
 		if outcome.Error != nil {
 			errorLogger.Printf(
-				"Error handling client (IP: %s, Name: %s, Company: %s, Email: %s): %v",
+				"Error handling client (IP: %s, Name: %s, Product: %s, Company: %s, Email: %s): %v",
 				data.IPAddress,
 				data.FirstName+" "+data.LastName,
+				data.ProductSerial+"-"+data.ProductModel,
 				data.CompanyName,
 				data.EmailAddress,
 				outcome.Error,
