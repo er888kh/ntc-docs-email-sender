@@ -15,13 +15,14 @@ EmailConfig:
   Header:
     From: "ADDRESS@HOST"
     Subject: "SUBJECT?"
-    MIME: "text/plain"
-    Miscellaneous: ""
+    MIME: "Content-Type: text/plain; charset=\"utf-8\"\nMIME-Version: 1.0"
+    Miscellaneous: "Content-Transfer-Encoding: base64\n"
   TemplateText: |
     The NTC docs portal recieved a new issue from this sender:
     IP: {{ .IPAddress }}
     Name: {{ .FirstName }} {{ .LastName }}
     Product: {{ .ProductSerial }}-{{ .ProductModel }}
+    Phone: {{ .PhoneNumber }}
     Company: {{ .CompanyName }}
     Reply Email Address: {{ .EmailAddress }}
     Issue Description: {{ .Description }}

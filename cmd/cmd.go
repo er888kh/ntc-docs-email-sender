@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bytes"
+	"encoding/base64"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -70,6 +71,7 @@ type EmailSendRequest struct {
 	LastName      string
 	ProductSerial string
 	ProductModel  string
+	PhoneNumber   string
 	CompanyName   string
 	EmailAddress  string
 	Description   string
@@ -146,7 +148,7 @@ func (m *MailConfig) EmailerInstance(ch <-chan EmailSendRequest) {
 				auth,
 				m.Sender.Address,
 				[]string{r.Address},
-				[]byte(m.Header.ToString(r.Address)+buf.String()),
+				[]byte(m.Header.ToString(r.Address)+base64.StdEncoding.EncodeToString(buf.Bytes())+"\n"),
 			)
 			/*
 				infoLogger.Printf("Wanted to send message %s with header %s to address %s, recipient %s",
@@ -160,16 +162,13 @@ func (m *MailConfig) EmailerInstance(ch <-chan EmailSendRequest) {
 func (s *server) clientHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "POST":
-		if err := r.ParseForm(); err != nil {
-			http.Error(w, "Invalid Form", http.StatusBadRequest)
-			return
-		}
 		var data EmailSendRequest
 		data.IPAddress = r.RemoteAddr
 		data.FirstName = r.FormValue("firstName")
 		data.LastName = r.FormValue("lastName")
 		data.ProductSerial = r.FormValue("productSerial")
 		data.ProductModel = r.FormValue("productModel")
+		data.PhoneNumber = r.FormValue("phoneNumber")
 		data.CompanyName = r.FormValue("company")
 		data.EmailAddress = r.FormValue("email")
 		data.Description = r.FormValue("description")
@@ -179,10 +178,11 @@ func (s *server) clientHandler(w http.ResponseWriter, r *http.Request) {
 		outcome := <-result
 		if outcome.Error != nil {
 			errorLogger.Printf(
-				"Error handling client (IP: %s, Name: %s, Product: %s, Company: %s, Email: %s): %v",
+				"Error handling client (IP: %s, Name: %s, Product: %s, Phone: %s, Company: %s, Email: %s): %v",
 				data.IPAddress,
 				data.FirstName+" "+data.LastName,
 				data.ProductSerial+"-"+data.ProductModel,
+				data.PhoneNumber,
 				data.CompanyName,
 				data.EmailAddress,
 				outcome.Error,
