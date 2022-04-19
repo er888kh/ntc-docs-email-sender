@@ -154,8 +154,11 @@ func (m *MailConfig) EmailerInstance(ch <-chan EmailSendRequest) {
 				infoLogger.Printf("Wanted to send message %s with header %s to address %s, recipient %s",
 					buf.String(), m.Header.ToString(r.Address), address, r.Name)
 			*/
-			emailReq.Result <- EmailSendOutcome{err}
+			if err != nil {
+				break
+			}
 		}
+		emailReq.Result <- EmailSendOutcome{err}
 	}
 }
 
